@@ -1,0 +1,66 @@
+import os
+from zipfile import ZipFile
+
+# Define the file contents
+files = {
+    "package.json": """{
+  "name": "azure-node-webapp",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
+""",
+    "server.js": """const express = require('express');
+const app = express();
+
+const port = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+  res.send('<h1>Hello from Azure App Service!</h1><p>Your app is running successfully.</p>');
+});
+
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
+""",
+    "web.config": """<configuration>
+  <system.webServer>
+    <handlers>
+      <add name="iisnode" path="server.js" verb="*" modules="iisnode"/>
+    </handlers>
+    <rewrite>
+      <rules>
+        <rule name="NodeInspector" patternSyntax="ECMAScript" stopProcessing="true">
+          <match url="^server.js\\/debug[\\/]?" />
+        </rule>
+        <rule name="StaticContent">
+          <action type="Rewrite" url="public{REQUEST_URI}"/>
+        </rule>
+        <rule name="DynamicContent">
+          <conditions>
+            <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="True"/>
+          </conditions>
+          <action type="Rewrite" url="server.js"/>
+        </rule>
+      </rules>
+    </rewrite>
+  </system.webServer>
+</configuration>
+"""
+}
+
+# Create and zip the files
+zip_filename = "azure-node-webapp.zip"
+with ZipFile(zip_filename, "w") as zipf:
+    for filename, content in files.items():
+        with open(filename, "w") as f:
+            f.write(content)
+        zipf.write(filename)
+        os.remove(filename)
+
+print(f"ZIP file created: {zip_filename}")
